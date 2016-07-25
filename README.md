@@ -9,7 +9,7 @@ greenrobot的EventBus是通过 onEvent的方式，然后定义Event实体类
 
 而本项目的代码是通过用户定义IEvent接口，然后程序通过动态代理实现接口，使用者通过这个实现类去调用接口的方法，直接通知注册并实现接口的注册者
 
-#EventBus in 5 steps
+#EventBus in 3 steps
 
 1.定义事件接口，直接继承于IEvent	
 
@@ -17,26 +17,65 @@ greenrobot的EventBus是通过 onEvent的方式，然后定义Event实体类
     	void onReceiveMessage(String message);
     }
 
-2.注册监听
-  
-	EventBus.register(MainActivity.this);
-
-3.注销监听
-
-	EventBus.unregister(MainActivity.this);
-
-4.实现事件
+2.注册监听，实现事件接口
 
 	 public MainActivity extends Activity implements IMessageEvent{
-		 @Override
-		 public void onReceiveMessage(String message){
+
+	    @Override
+	    protected void onCreate(Bundle savedInstanceState) {
+	        super.onCreate(savedInstanceState);
+			//注册监听
+			EventBus.register(this);
+		}
+
+	    @Override
+	    protected void onDestroy() {
+	        super.onDestroy();
+			//注销监听
+			EventBus.unregister(this);
+	    }
+
+		@Override
+		public void onReceiveMessage(String message){
 	       
 	    }
 	 }
 
-5.发送事件
+3.发送事件
 
 	EventBus.get(IMessageEvent.class).onReceiveMessage("Message");
+
+#扩展功能
+        @Subscribe(threadMode = Subscribe.MAIN,sticky=true)
+		@Override
+		public void onReceiveMessage(String message){
+	       
+	    }
+
+threadMode = Subscribe.MAIN表示无论在什么线程发布事件，都在主线程接收事件  
+threadMode有4种，默认是POSTING    
+
+		    /**
+		     * 发事件后直接调用，收发在同一线程中
+		     */
+		    int POSTING = 0;
+		    /**
+		     * 无论之前什么线程发送，都在主线程接收
+		     */
+		    int MAIN = 1;
+		    /**
+		     * 在后台线程接收，如果发送的线程不是主线程直接调用这个，如果是主线程就开个线程执行这个方法
+		     */
+		    int BACKGROUND = 2;
+		    /**
+		     * 无论如何都会在开个线程执行（会有个线程池，不一定是真的开个线程，可能取线程池中空闲的线程）
+		     */
+		    int ASYNC = 3;
+sticky = true 表示之前已经把事件post出去了，但监听当时还没注册，注册监听的时候就会接收到sticky的事件.  
+  
+发布sticky的事件
+
+	EventBus.get(IMessageEvent.class,true).onReceiveMessage("Message");
 
 #Gradle引用
 	
