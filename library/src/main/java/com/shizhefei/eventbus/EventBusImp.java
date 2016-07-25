@@ -36,15 +36,41 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 整个思路就是观察者模式
+ * 通过动态代理实现IEvent，一旦有方法被调用就通知注册的观察者
+ */
 class EventBusImp {
 
+    /**
+     * 通过动态代理实现的IEvent
+     */
     private Map<Class<IEvent>, IEvent> eventProxy = new ConcurrentHashMap<>();
+    /**
+     * 通过动态代理实现的IEvent，多了发送粘性消息功能
+     */
     private Map<Class<IEvent>, IEvent> eventStickyProxy = new ConcurrentHashMap<>();
+    /**
+     * 注册的观察者
+     */
     private Map<IEvent, Register> registers = new ConcurrentHashMap<>();
+    /**
+     * stickyDataMap 的key是事件的class，value是执行的方法和参数的集合.
+     * 粘性消息包含多个事件的粘性消息，一个事件对应多个方法
+     */
     private Map<Class<? extends IEvent>, LinkedHashMap<Method, Object[]>> stickyDataMap = new HashMap<>();
+    /**
+     * 粘性消息的线程锁对象
+     */
     private final Object stickyDataLock = new Object();
+    /**
+     * 主线程通知的handle
+     */
     private Handler handler;
 
+    /**
+     * 下面代码来自AsyTask的线程池 Executor
+     */
     private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
     private static final int CORE_POOL_SIZE = CPU_COUNT + 1;
     private static final int MAXIMUM_POOL_SIZE = CPU_COUNT * 2 + 1;
@@ -66,16 +92,31 @@ class EventBusImp {
         handler = new Handler(Looper.getMainLooper());
     }
 
-    public <EVENT extends IEvent> EVENT get(Class<EVENT> service) {
-        return get(service, false);
+    /**
+     * 获取动态代理实现的IEvent，用来发送事件
+     *
+     * @param eventClass
+     * @param <EVENT>
+     * @return
+     */
+    public <EVENT extends IEvent> EVENT get(Class<EVENT> eventClass) {
+        return get(eventClass, false);
     }
 
-    public void removeStickyEvent(Class<? extends IEvent> service) {
+    /**
+     * 根据event移除掉对应的粘性消息
+     *
+     * @param eventClass
+     */
+    public void removeStickyEvent(Class<? extends IEvent> eventClass) {
         synchronized (stickyDataLock) {
-            stickyDataMap.remove(service);
+            stickyDataMap.remove(eventClass);
         }
     }
 
+    /**
+     * 移除掉所有的粘性消息
+     */
     public void removeAllStickyEvent() {
         synchronized (stickyDataLock) {
             stickyDataMap.clear();
@@ -85,37 +126,49 @@ class EventBusImp {
     /**
      * 注册这个对象的所有event接口
      *
-     * @param event
+     * @param subscriber
      */
-
-    public void register(IEvent event) {
-        if (registers.containsKey(event)) {
+    public void register(IEvent subscriber) {
+        //如果已经注册了就不再注册
+        if (registers.containsKey(subscriber)) {
             return;
         }
-        ArrayList<Class<? extends IEvent>> eventClass = Util.getInterfaces(event);
-        Subscribe subscribeAnnotation = event.getClass().getAnnotation(Subscribe.class);
+        //获取subscriber实现的所有事件接口
+        ArrayList<Class<? extends IEvent>> eventClassList = Util.getInterfaces(subscriber);
+        //获取subscriber的Subscribe注解
+        Subscribe subscribeAnnotation = subscriber.getClass().getAnnotation(Subscribe.class);
         SubscribeInfo subscribeInfo;
         if (subscribeAnnotation == null) {
             subscribeInfo = SubscribeInfo.NONE;
         } else {
             subscribeInfo = new SubscribeInfo(subscribeAnnotation.sticky(), subscribeAnnotation.threadMode());
         }
-        Register register = new Register(event, eventClass, subscribeInfo);
-        registers.put(event, register);
+        Register register = new Register(subscriber, eventClassList, subscribeInfo);
+        //添加到map中
+        registers.put(subscriber, register);
 
+        //发送粘性消息
         synchronized (stickyDataLock) {
+            //stickyDataMap 的key是事件的class，value是执行的方法和参数的集合.
+            //粘性消息包含多个事件的粘性消息，一个事件对应多个方法
             for (Entry<Class<? extends IEvent>, LinkedHashMap<Method, Object[]>> entry : stickyDataMap.entrySet()) {
-                if (eventClass.contains(entry.getKey())) {
+                //实现的所有事件是否包含，粘性消息里面的事件class
+                if (eventClassList.contains(entry.getKey())) {
                     LinkedHashMap<Method, Object[]> inMap = entry.getValue();
+                    //循环单个事件class对应的有粘性消息的方法
                     for (Entry<Method, Object[]> in : inMap.entrySet()) {
                         Method method = in.getKey();
                         Object[] args = in.getValue();
+                        //获取注解信息
                         SubscribeInfo info = register.getSubscribeInfo(method);
+                        //如果没有注解，就使用类的注解信息
                         if (info == SubscribeInfo.NONE) {
                             info = subscribeInfo;
                         }
+                        //是否接收粘性消息
                         if (info.sticky) {
-                            invoke(register.target, register, method, args);
+                            //执行通知订阅者，对应的实现事件的方法
+                            invoke(register.subscriber, register, method, args);
                         }
                     }
                 }
@@ -125,38 +178,47 @@ class EventBusImp {
 
 
     /**
-     * 注销掉这个对象的有event接口
+     * 取消订阅事件
      *
-     * @param event
+     * @param subscriber
      */
 
-    public void unregister(IEvent event) {
-        Register register = registers.remove(event);
+    public void unregister(IEvent subscriber) {
+        Register register = registers.remove(subscriber);
         register.isRegister = false;
     }
 
-    public boolean isRegister(IEvent event) {
-        return registers.containsKey(event);
+
+    /**
+     * 是否订阅
+     *
+     * @param subscriber 订阅者
+     * @return 是否订阅
+     */
+    public boolean isRegister(IEvent subscriber) {
+        return registers.containsKey(subscriber);
     }
 
 
-    public <EVENT extends IEvent> EVENT get(Class<EVENT> service, boolean sticky) {
-        Util.validateServiceInterface(service);
+    public <EVENT extends IEvent> EVENT get(Class<EVENT> eventClass, boolean sticky) {
+        //判断这个eventClass是否合法
+        Util.validateServiceInterface(eventClass);
         Map<Class<IEvent>, IEvent> map;
+        //是否发送粘性消息，存在不同的map中
         if (sticky) {
             map = eventStickyProxy;
         } else {
             map = eventProxy;
         }
-        IEvent event = map.get(service);
+        IEvent event = map.get(eventClass);
         if (event == null) {
             synchronized (EventBusImp.class) {
-                event = map.get(service);
+                event = map.get(eventClass);
                 if (event == null) {
                     if (sticky) {
-                        event = (EVENT) Proxy.newProxyInstance(service.getClassLoader(), new Class<?>[]{service}, new StickyProxyInvocationHandler(service));
+                        event = (EVENT) Proxy.newProxyInstance(eventClass.getClassLoader(), new Class<?>[]{eventClass}, new StickyProxyInvocationHandler(eventClass));
                     } else {
-                        event = (EVENT) Proxy.newProxyInstance(service.getClassLoader(), new Class<?>[]{service}, new ProxyInvocationHandler(service));
+                        event = (EVENT) Proxy.newProxyInstance(eventClass.getClassLoader(), new Class<?>[]{eventClass}, new ProxyInvocationHandler(eventClass));
                     }
                 }
             }
@@ -165,6 +227,9 @@ class EventBusImp {
     }
 
 
+    /**
+     * 粘性消息的发送的实现
+     */
     private class StickyProxyInvocationHandler extends ProxyInvocationHandler {
         public StickyProxyInvocationHandler(Class<? extends IEvent> service) {
             super(service);
@@ -172,6 +237,7 @@ class EventBusImp {
 
         @Override
         public Object invoke(Object proxy, Method method, Object... args) throws Throwable {
+            //一旦被调用就存消息到stickyDataMap中
             synchronized (stickyDataLock) {
                 LinkedHashMap<Method, Object[]> invokeDataList = stickyDataMap.get(service);
                 if (invokeDataList == null) {
@@ -184,7 +250,9 @@ class EventBusImp {
         }
     }
 
-
+    /**
+     * 消息发送的实现类
+     */
     private class ProxyInvocationHandler implements InvocationHandler {
         Class<? extends IEvent> service;
 
@@ -196,39 +264,39 @@ class EventBusImp {
         public Object invoke(Object proxy, Method method, Object... args) throws Throwable {
             for (Entry<IEvent, Register> entry : registers.entrySet()) {
                 Register register = entry.getValue();
-                if (register.eventClass.contains(service)) {
-                    EventBusImp.this.invoke(register.target, register, method, args);
+                if (register.eventClassList.contains(service)) {
+                    EventBusImp.this.invoke(register.subscriber, register, method, args);
                 }
             }
             return null;
         }
     }
 
-    private void invoke(IEvent target, Register register, Method method, Object[] args) {
+    private void invoke(IEvent subscriber, Register register, Method method, Object[] args) {
         try {
             boolean isMainThread = Looper.getMainLooper() == Looper.myLooper();
             SubscribeInfo subscribeInfo = register.getSubscribeInfo(method);
             switch (subscribeInfo.threadMode) {
                 case Subscribe.POSTING:
                 default:
-                    method.invoke(target, args);
+                    method.invoke(subscriber, args);
                     break;
                 case Subscribe.MAIN:
                     if (isMainThread) {
-                        method.invoke(target, args);
+                        method.invoke(subscriber, args);
                     } else {
-                        handler.post(new InvokeRun(register, method, args));
+                        handler.post(new InvokeRunnable(register, method, args));
                     }
                     break;
                 case Subscribe.BACKGROUND:
                     if (isMainThread) {
-                        THREAD_POOL_EXECUTOR.execute(new InvokeRun(register, method, args));
+                        THREAD_POOL_EXECUTOR.execute(new InvokeRunnable(register, method, args));
                     } else {
-                        method.invoke(target, args);
+                        method.invoke(subscriber, args);
                     }
                     break;
                 case Subscribe.ASYNC:
-                    THREAD_POOL_EXECUTOR.execute(new InvokeRun(register, method, args));
+                    THREAD_POOL_EXECUTOR.execute(new InvokeRunnable(register, method, args));
                     break;
             }
         } catch (IllegalAccessException e) {
@@ -238,23 +306,18 @@ class EventBusImp {
         }
     }
 
-    private static class InvokeData {
-        Method method;
-        Object[] args;
-
-        public InvokeData(Method method, Object[] args) {
-            this.method = method;
-            this.args = args;
-        }
-    }
-
-    private static class InvokeRun implements Runnable {
-
+    /**
+     * 执行方法的Runnable
+     */
+    private static class InvokeRunnable implements Runnable {
+        //执行的方法
         private final Method method;
+        //参数
         private final Object[] args;
+        //注册者，这里用弱引用
         private WeakReference<Register> registerWeakReference;
 
-        public InvokeRun(Register register, Method method, Object[] args) {
+        public InvokeRunnable(Register register, Method method, Object[] args) {
             registerWeakReference = new WeakReference<>(register);
             this.method = method;
             this.args = args;
@@ -265,7 +328,7 @@ class EventBusImp {
             try {
                 Register register = registerWeakReference.get();
                 if (register != null && register.isRegister) {
-                    method.invoke(register.target, args);
+                    method.invoke(register.subscriber, args);
                 }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
@@ -276,17 +339,30 @@ class EventBusImp {
     }
 
     private static class Register {
-        IEvent target;
-        ArrayList<Class<? extends IEvent>> eventClass;
+        /***/
+        IEvent subscriber;
+        /**
+         * subscriber 实现的所有事件
+         */
+        ArrayList<Class<? extends IEvent>> eventClassList;
+        /**
+         * 方法的信息
+         */
         Map<Method, SubscribeInfo> methodInfoMap = new ConcurrentHashMap<>();
         volatile boolean isRegister;
 
-        public Register(IEvent target, ArrayList<Class<? extends IEvent>> eventClass, SubscribeInfo subscribeInfo) {
-            this.target = target;
-            this.eventClass = eventClass;
+        public Register(IEvent subscriber, ArrayList<Class<? extends IEvent>> eventClassList, SubscribeInfo subscribeInfo) {
+            this.subscriber = subscriber;
+            this.eventClassList = eventClassList;
             this.isRegister = true;
         }
 
+        /**
+         * 获取方法的注解信息，信息有，在哪个线程执行threadMode，是否接收粘性消息sticky
+         *
+         * @param proxyMethod
+         * @return
+         */
         private SubscribeInfo getSubscribeInfo(Method proxyMethod) {
             SubscribeInfo subscribeInfo = methodInfoMap.get(proxyMethod);
             if (subscribeInfo == null) {
@@ -294,7 +370,7 @@ class EventBusImp {
                     subscribeInfo = methodInfoMap.get(proxyMethod);
                     if (subscribeInfo == null) {
                         try {
-                            Method rm = target.getClass().getMethod(proxyMethod.getName(), proxyMethod.getParameterTypes());
+                            Method rm = subscriber.getClass().getMethod(proxyMethod.getName(), proxyMethod.getParameterTypes());
                             Subscribe subscribeAnnotation = rm.getAnnotation(Subscribe.class);
                             if (subscribeAnnotation == null) {
                                 subscribeInfo = SubscribeInfo.NONE;
@@ -313,7 +389,13 @@ class EventBusImp {
     }
 
     private static class SubscribeInfo {
+        /**
+         * 是否接收粘性消息sticky
+         */
         boolean sticky;
+        /**
+         * 在哪个线程执行threadMode
+         */
         int threadMode;
 
         private SubscribeInfo() {
