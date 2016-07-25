@@ -40,7 +40,7 @@ greenrobot的EventBus是通过 onEvent的方式，然后定义Event实体类
 
 #Gradle引用
 	
-   提交jcenter中
+	compile 'com.shizhefei:EventBus:1.0.0'
 
 #License
 
