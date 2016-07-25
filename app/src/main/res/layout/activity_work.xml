@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="right"
+    android:orientation="vertical"
+    tools:context=".ThreadTestActivity">
+
+    <Button
+        android:id="@+id/work_doUpdate_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="sned Update event" />
+
+    <Button
+        android:id="@+id/work_doSleep_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:text="Do Sleep 5 s" />
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/work_recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ddd" />
+</LinearLayout>

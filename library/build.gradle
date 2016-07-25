@@ -1,0 +1,39 @@
+apply plugin: 'com.android.library'
+apply plugin: 'com.novoda.bintray-release'//添加
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.0"
+
+    defaultConfig {
+        minSdkVersion 10
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+}
+
+//上传到jcenter 执行
+//gradlew clean build bintrayUpload -PbintrayUser=用户名 -PbintrayKey=apiKey -PdryRun=false
+//添加
+//添加
+publish {
+    userOrg = 'luckyjayce'//bintray.com用户名
+    groupId = 'com.shizhefei'//jcenter上的路径
+    artifactId = 'EventBus'//项目名称
+    publishVersion = '1.0.0'//版本号
+    desc = '事件总线'//描述，不重要
+    website = 'https://github.com/LuckyJayce/EventBus'
+//网站，不重要；尽量模拟github上的地址，例如我这样的；当然你有地址最好了
+}
