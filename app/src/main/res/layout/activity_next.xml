@@ -12,39 +12,39 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="New ToggleButton"
-        android:textOff="主线程"
-        android:textOn="子线程" />
+        android:textOff="主线程发布事件"
+        android:textOn="子线程发布事件" />
 
     <Button
         android:id="@+id/login_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="60dp"
-        android:text="Login" />
+        android:text="Login事件" />
 
     <Button
         android:id="@+id/logout_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Logout" />
+        android:text="Logout事件" />
 
     <Button
         android:id="@+id/delete_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="delete" />
+        android:text="delete事件" />
 
     <Button
         android:id="@+id/add_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="add" />
+        android:text="add事件" />
 
     <Button
         android:id="@+id/update_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="update" />
+        android:text="update事件" />
 
 
 </LinearLayout>

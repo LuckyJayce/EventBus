@@ -26,7 +26,7 @@ public class ReceiverFragment extends Fragment implements IMessageEvent {
 
         messageTextView = (TextView) layout.findViewById(R.id.receiver_message_textView);
 
-        EventBus.register(this);
+        EventBus.withActivity(getActivity()).register(this);
 
         return layout;
     }
@@ -41,7 +41,7 @@ public class ReceiverFragment extends Fragment implements IMessageEvent {
 
     @Override
     public void onDestroyView() {
-        EventBus.unregister(this);
+        EventBus.withActivity(getActivity()).unregister(this);
         super.onDestroyView();
     }
 }

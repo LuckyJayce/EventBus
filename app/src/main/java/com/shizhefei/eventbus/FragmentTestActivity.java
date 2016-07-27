@@ -1,6 +1,7 @@
 package com.shizhefei.eventbus;
 
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -20,11 +21,13 @@ import com.shizhefei.view.indicator.transition.OnTransitionTextListener;
 public class FragmentTestActivity extends AppCompatActivity {
 
     private IndicatorViewPager indicatorViewPager;
+    private View nextButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_fragment_test);
+        nextButton = findViewById(R.id.fragmentTest_next_button);
         Indicator indicator = (Indicator) findViewById(R.id.fragmentTest_indicator);
         ViewPager viewPager = (ViewPager) findViewById(R.id.fragmentTest_viewPager);
 
@@ -33,6 +36,7 @@ public class FragmentTestActivity extends AppCompatActivity {
 
         indicatorViewPager = new IndicatorViewPager(indicator, viewPager);
         indicatorViewPager.setAdapter(new PagersAdapter(getSupportFragmentManager()));
+        nextButton.setOnClickListener(onClickListener);
     }
 
     private class PagersAdapter extends IndicatorViewPager.IndicatorFragmentPagerAdapter {
@@ -67,4 +71,14 @@ public class FragmentTestActivity extends AppCompatActivity {
             return fragment;
         }
     }
+
+    private View.OnClickListener onClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+            if (v == nextButton) {
+                startActivity(new Intent(getApplicationContext(), FragmentTestActivity.class));
+            }
+        }
+    };
 }

@@ -15,19 +15,19 @@
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="next" />
+        android:text="发送消息Activity，MainActivity接收taost" />
 
     <Button
         android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Fragments" />
+        android:text="发布Activity内部的事件，其他Activity不接收" />
 
     <Button
         android:id="@+id/button3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Thread Test" />
+        android:text="线程测试" />
 </LinearLayout>

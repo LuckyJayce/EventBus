@@ -6,18 +6,18 @@
     android:orientation="vertical">
 
     <Button
-        android:id="@+id/a_send_button"
+        android:id="@+id/a_sendActivityEvent_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="send Message To AFragment" />
+        android:text="发布activity内的message事件" />
 
 
     <Button
-        android:id="@+id/a_sendSticky_button"
+        android:id="@+id/a_sendActivityEventSticky_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
-        android:text="send Sticky Message To AFragment" />
+        android:text="发布activity内的粘性Message事件" />
 </LinearLayout>

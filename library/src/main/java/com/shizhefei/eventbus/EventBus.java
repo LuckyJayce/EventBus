@@ -1,12 +1,12 @@
 /**
  * Copyright 2015 shizhefei（LuckyJayce）
- * <p/>
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p/>
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,15 +15,19 @@
  */
 package com.shizhefei.eventbus;
 
+import android.app.Activity;
+
+import java.util.WeakHashMap;
+
 public class EventBus {
 
-    private static EventBusImp eventPoster;
+    private static EventHandler eventPoster;
 
-    private static EventBusImp getDefault() {
+    private static EventHandler getDefault() {
         if (eventPoster == null) {
             synchronized (EventBus.class) {
                 if (eventPoster == null) {
-                    eventPoster = new EventBusImp();
+                    eventPoster = new EventHandler();
                 }
             }
         }
@@ -56,11 +60,6 @@ public class EventBus {
         getDefault().register(event);
     }
 
-    public static <EVENT extends IEvent> void register(Class<EVENT> eventClass, IEvent event) {
-        getDefault().register(event);
-    }
-
-
     /**
      * 注销掉这个对象的有event接口
      *
@@ -75,5 +74,22 @@ public class EventBus {
         return getDefault().isRegister(event);
     }
 
+    /**
+     * 获取Activity内通信的EventHandler
+     *
+     * @param activity
+     * @return
+     */
+    public static synchronized IEventHandler withActivity(Activity activity) {
+        EventHandler eventBusImp = eventBusImpMap.get(activity);
+        if (eventBusImp == null) {
+            eventBusImp = new EventHandler();
+            eventBusImpMap.put(activity, eventBusImp);
+        }
+        return eventBusImp;
+    }
+
+
+    private static WeakHashMap<Activity, EventHandler> eventBusImpMap = new WeakHashMap<>();
 
 }

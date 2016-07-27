@@ -40,16 +40,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 整个思路就是观察者模式
  * 通过动态代理实现IEvent，一旦有方法被调用就通知注册的观察者
  */
-class EventBusImp {
+class EventHandler implements IEventHandler {
 
     /**
      * 通过动态代理实现的IEvent
      */
-    private Map<Class<IEvent>, IEvent> eventProxy = new ConcurrentHashMap<>();
+    private Map<Class<? extends IEvent>, IEvent> eventProxy = new ConcurrentHashMap<>();
     /**
      * 通过动态代理实现的IEvent，多了发送粘性消息功能
      */
-    private Map<Class<IEvent>, IEvent> eventStickyProxy = new ConcurrentHashMap<>();
+    private Map<Class<? extends IEvent>, IEvent> eventStickyProxy = new ConcurrentHashMap<>();
     /**
      * 注册的观察者
      */
@@ -79,16 +79,16 @@ class EventBusImp {
         private final AtomicInteger mCount = new AtomicInteger(1);
 
         public Thread newThread(Runnable r) {
-            return new Thread(r, "EventBusImp #" + mCount.getAndIncrement());
+            return new Thread(r, "EventHandler #" + mCount.getAndIncrement());
         }
     };
     private static final BlockingQueue<Runnable> sPoolWorkQueue =
-            new LinkedBlockingQueue<Runnable>(128);
+            new LinkedBlockingQueue<Runnable>();
     public static final Executor THREAD_POOL_EXECUTOR
             = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
             TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
 
-    public EventBusImp() {
+    public EventHandler() {
         handler = new Handler(Looper.getMainLooper());
     }
 
@@ -99,6 +99,7 @@ class EventBusImp {
      * @param <EVENT>
      * @return
      */
+    @Override
     public <EVENT extends IEvent> EVENT get(Class<EVENT> eventClass) {
         return get(eventClass, false);
     }
@@ -108,6 +109,7 @@ class EventBusImp {
      *
      * @param eventClass
      */
+    @Override
     public void removeStickyEvent(Class<? extends IEvent> eventClass) {
         synchronized (stickyDataLock) {
             stickyDataMap.remove(eventClass);
@@ -117,6 +119,7 @@ class EventBusImp {
     /**
      * 移除掉所有的粘性消息
      */
+    @Override
     public void removeAllStickyEvent() {
         synchronized (stickyDataLock) {
             stickyDataMap.clear();
@@ -128,6 +131,7 @@ class EventBusImp {
      *
      * @param subscriber
      */
+    @Override
     public void register(IEvent subscriber) {
         //如果已经注册了就不再注册
         if (registers.containsKey(subscriber)) {
@@ -176,13 +180,12 @@ class EventBusImp {
         }
     }
 
-
     /**
      * 取消订阅事件
      *
      * @param subscriber
      */
-
+    @Override
     public void unregister(IEvent subscriber) {
         Register register = registers.remove(subscriber);
         register.isRegister = false;
@@ -195,15 +198,16 @@ class EventBusImp {
      * @param subscriber 订阅者
      * @return 是否订阅
      */
+    @Override
     public boolean isRegister(IEvent subscriber) {
         return registers.containsKey(subscriber);
     }
 
-
+    @Override
     public <EVENT extends IEvent> EVENT get(Class<EVENT> eventClass, boolean sticky) {
         //判断这个eventClass是否合法
         Util.validateServiceInterface(eventClass);
-        Map<Class<IEvent>, IEvent> map;
+        Map<Class<? extends IEvent>, IEvent> map;
         //是否发送粘性消息，存在不同的map中
         if (sticky) {
             map = eventStickyProxy;
@@ -212,7 +216,7 @@ class EventBusImp {
         }
         IEvent event = map.get(eventClass);
         if (event == null) {
-            synchronized (EventBusImp.class) {
+            synchronized (EventHandler.class) {
                 event = map.get(eventClass);
                 if (event == null) {
                     if (sticky) {
@@ -220,6 +224,7 @@ class EventBusImp {
                     } else {
                         event = (EVENT) Proxy.newProxyInstance(eventClass.getClassLoader(), new Class<?>[]{eventClass}, new ProxyInvocationHandler(eventClass));
                     }
+                    map.put(eventClass, event);
                 }
             }
         }
@@ -265,7 +270,7 @@ class EventBusImp {
             for (Entry<IEvent, Register> entry : registers.entrySet()) {
                 Register register = entry.getValue();
                 if (register.eventClassList.contains(service)) {
-                    EventBusImp.this.invoke(register.subscriber, register, method, args);
+                    EventHandler.this.invoke(register.subscriber, register, method, args);
                 }
             }
             return null;

@@ -6,6 +6,12 @@
     android:orientation="vertical"
     tools:context="com.shizhefei.eventbus.FragmentTestActivity">
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="进入第二个Activity"
+        android:id="@+id/fragmentTest_next_button" />
+
     <com.shizhefei.view.indicator.ScrollIndicatorView
         android:id="@+id/fragmentTest_indicator"
         android:layout_width="match_parent"

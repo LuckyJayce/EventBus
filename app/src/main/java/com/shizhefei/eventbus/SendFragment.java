@@ -15,22 +15,23 @@ import java.util.Date;
 
 
 /**
+ * 发布事件
  * Created by LuckyJayce on 2016/7/25.
  */
 public class SendFragment extends Fragment {
-    private View sendButton;
-    private View sendStickyButton;
+    private View sendActivityEventButton;
+    private View sendActivityEventStickyButton;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View layout = inflater.inflate(R.layout.fragment_a, container, false);
 
-        sendButton = layout.findViewById(R.id.a_send_button);
-        sendStickyButton = layout.findViewById(R.id.a_sendSticky_button);
+        sendActivityEventButton = layout.findViewById(R.id.a_sendActivityEvent_button);
+        sendActivityEventStickyButton = layout.findViewById(R.id.a_sendActivityEventSticky_button);
 
-        sendButton.setOnClickListener(onClickListener);
-        sendStickyButton.setOnClickListener(onClickListener);
+        sendActivityEventButton.setOnClickListener(onClickListener);
+        sendActivityEventStickyButton.setOnClickListener(onClickListener);
 
         return layout;
     }
@@ -39,12 +40,15 @@ public class SendFragment extends Fragment {
         @Override
         public void onClick(View v) {
             String time = String.valueOf(DateFormat.format("yyyy-MM-dd kk:mm:ss", new Date()));
-            if (v == sendButton) {
-                String message = "Test";
-                EventBus.get(IMessageEvent.class).onReceiveMessage(time, message);
-            } else if (v == sendStickyButton) {
-                String message = "Sticky Test";
-                EventBus.get(IMessageEvent.class, true).onReceiveMessage(time, message);
+            if (v == sendActivityEventButton) {
+                String message = getActivity() + " Activity EventHandler Test";
+                EventBus.withActivity(getActivity()).get(IMessageEvent.class).onReceiveMessage(time, message);
+
+            } else if (v == sendActivityEventStickyButton) {
+                String message = getActivity() + " Activity EventHandler Test";
+                //使用activity内部的EventHandler 进行发布事件，该事件通过相同的activity的 EventBus.withActivity(getActivity()).register();接收到
+                EventBus.withActivity(getActivity()).get(IMessageEvent.class, true).onReceiveMessage(time, message);
+
             }
         }
     };
