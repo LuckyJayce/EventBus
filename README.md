@@ -77,9 +77,23 @@ sticky = true 表示之前已经把事件post出去了，但监听当时还没�
 
 	EventBus.get(IMessageEvent.class,true).onReceiveMessage("Message");
 
+#Activity内部事件
+
+有时常常遇到这样的问题，我这个Activity发布的事件不想让其他Activity接收到，只想让该Activity内部的Fragment接收.  
+	
+    EventBus.withActivity(getActivity());
+
+发布消息
+
+	EventBus.withActivity(getActivity()).get(IMessageEvent.class).onReceiveMessage("Message");
+
+注册接收消息
+
+	EventBus.withActivity(getActivity()).register(this);
+
 #Gradle引用
 	
-	compile 'com.shizhefei:EventBus:1.0.0'
+	compile 'com.shizhefei:EventBus:1.0.1'
 
 #License
 
