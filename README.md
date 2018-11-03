@@ -1,3 +1,6 @@
+## [DEPRECATED] 使用EventBus-Apt优化实现，不过用法类似
+https://github.com/LuckyJayce/EventBus-Apt
+
 # EventBus
 事件总线
 
